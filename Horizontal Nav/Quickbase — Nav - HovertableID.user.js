@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Quickbase — Hover URL (Cached)
 // @namespace    https://quickbase.com/userscripts
-// @version      1.6
-// @description  Displays the destination URL when hovering over elements with class .css-ta74hp, with instant caching.
+// @version      1.7
+// @description  Displays the table DBID when hovering over table links in the Quickbase nav.
 // @match        https://*.quickbase.com/*
 // @grant        GM_addStyle
 // @run-at       document-idle
@@ -81,26 +81,24 @@
       }
     }, { passive: true });
 
+    // Use a[href*="/table/"] to match table links regardless of CSS-in-JS class names.
+    const TABLE_LINK_SEL = 'a[href*="/table/"]';
+
     // 2. Hover Logic (only fires once per element entry)
     document.addEventListener('mouseover', (e) => {
-      const target = e.target.closest('.css-ta74hp');
+      const target = e.target.closest(TABLE_LINK_SEL);
       if (!target || target === state.lastTarget) return;
-      
+
       state.lastTarget = target;
-      
+
       // Check Cache first
-      let url = state.cache.get(target);
-      
-      if (!url) {
-        // Not in cache, resolve it
-        const linkElement = target.closest('a') || target.querySelector('a');
-        url = linkElement ? linkElement.href : 'No URL found';
-        let match = url;
-        match = url.match(/\/table\/([^/]+)/);
-        var tableid = match[1];
-        
-        // Store in cache for next time
-        state.cache.set(target, url);
+      let tableid = state.cache.get(target);
+
+      if (!tableid) {
+        const match = target.href.match(/\/table\/([^/?#]+)/);
+        tableid = match ? match[1] : null;
+        if (!tableid) return;
+        state.cache.set(target, tableid);
         log(`Resolved & Cached: "${target.textContent.trim().substring(0, 20)}..."`);
       } else {
         log(`Cache Hit: "${target.textContent.trim().substring(0, 20)}..."`);
@@ -110,7 +108,7 @@
     }, true);
 
     document.addEventListener('mouseout', (e) => {
-      const target = e.target.closest('.css-ta74hp');
+      const target = e.target.closest(TABLE_LINK_SEL);
       if (target) {
         state.lastTarget = null;
         if (state.tooltip) state.tooltip.style.display = 'none';
