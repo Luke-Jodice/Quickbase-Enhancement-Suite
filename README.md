@@ -12,6 +12,8 @@ Tampermonkey userscripts that fill the gaps in the Quickbase developer experienc
 | [Function Autocomplete](#function-autocomplete) | `Ctrl + Space` | Autocomplete formula functions with parameter signatures |
 | [Field Marker Tooltips](#field-marker-tooltips) | Hover | Show field type, FID, and table on hover over field markers |
 | [Legacy Form Field Search](#legacy-form-field-search) | `Ctrl + F` | Filter the field list in the legacy form editor |
+| [Hover Table Info](#hover-table-info) | Hover | Displays rich schema stats (field counts, formulas, relationships) on table links |
+| [Hover Table ID](#hover-table-id) | Hover | Quickly displays the raw DBID (Table ID) when hovering over table links |
 
 ---
 
@@ -86,6 +88,45 @@ Adds a sticky search bar to the top of the legacy form editor's field list. Filt
 - **Ctrl+F** focuses the search bar when the form editor is visible
 - **Esc** clears the filter and restores all rows
 - Re-injects automatically if the editor is rebuilt by SPA navigation
+
+</details>
+
+---
+
+## Horizontal Nav
+
+### Hover Table Info
+
+> `Horizontal Nav/Quickbase - Nav - hover table info.user.js` — v2.1
+
+Hover over any table link in the horizontal navigation or modern UI to see a detailed tooltip summarizing the table's schema. It actively uses your session via `API_GetSchema` to pull real-time data securely.
+
+NOTE: This script would require the user to disable "Require Application Tokens" from the App Properties Page.
+
+<details>
+<summary>Features</summary>
+
+- Displays Table Name and Description
+- Shows total Fields, Key FID, Formula counts, and Relationship counts
+- Operates directly via active session tickets without needing explicit tokens
+- Clean UI seamlessly matches standard Quickbase aesthetic
+- Gracefully caches API replies instantly
+
+</details>
+
+### Hover Table ID
+
+> `Horizontal Nav/Quickbase — Nav - HovertableID.user.js` — v1.6
+
+A super lightweight alternative that simply reveals the raw DBID (Table ID) of a table when hovering over navigation links. 
+
+<details>
+<summary>Features</summary>
+
+- Instantly displays the destination table ID by parsing the URL
+- Implements hyper-fast `WeakMap` caching to prevent memory leaks and redundant parsing
+- Simple, unobtrusive tooltip styling
+- Perfect for developers who just need to grab DBIDs to copy/paste quickly
 
 </details>
 
