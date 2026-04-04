@@ -187,12 +187,16 @@
       if (formula === 'Fetching formula...') {
         bodyHtml = '<span class="fp-empty">Fetching formula...</span>';
       } else {
-        var lines = formula.split(/\r?\n/);
+        // Strip out lines that are entirely whitespace
+        var lines = formula.split(/\r?\n/).filter(function(line) {
+          return line.trim() !== '';
+        });
+
         if (lines.length > 5) {
           bodyHtml = esc(lines.slice(0, 5).join('\n')) + 
                      '\n<span class="fp-trunc">... (Formula exceeds 5 lines. View field settings to read more.)</span>';
         } else {
-          bodyHtml = esc(formula);
+          bodyHtml = esc(lines.join('\n'));
         }
       }
     }
