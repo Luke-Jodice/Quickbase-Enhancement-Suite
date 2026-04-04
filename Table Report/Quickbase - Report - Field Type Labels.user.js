@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Quickbase — Report — Field Type Labels
 // @namespace    https://quickbase.com/userscripts
-// @version      1.3
+// @version      1.6
 // @description  Shows field type in italics under each column header in table reports; hovering a formula field shows a scrollable formula preview
 // @match        https://*.quickbase.com/*
 // @grant        GM_addStyle
@@ -28,27 +28,76 @@
     IB:'iCalendar',   VL:'vCard',
   };
 
-  const FORMULA_TYPES = { FM: 1, FV: 1 };
+  // Field categories — drives colour + prefix
+  // 'scalar'  : user-entered data fields
+  // 'formula' : computed by a formula expression
+  // 'lookup'  : value pulled from a related table
+  // 'summary' : aggregate over related records
+  // 'system'  : built-in QB system fields
+  const FIELD_CATEGORY = {
+    // scalar
+    TX:'scalar', RT:'scalar', NM:'scalar', CR:'scalar', PC:'scalar',
+    DT:'scalar', TS:'scalar', TM:'scalar', DU:'scalar', CB:'scalar',
+    LK:'scalar', EM:'scalar', PH:'scalar', US:'scalar', UL:'scalar',
+    ML:'scalar', FL:'scalar', AB:'scalar', ST:'scalar', ZP:'scalar',
+    CT:'scalar', CO:'scalar', MC:'scalar', BC:'scalar', IB:'scalar', VL:'scalar',
+    // formula
+    FM:'formula', FV:'formula',
+    // lookup / cross-table
+    LU:'lookup', XD:'lookup', SL:'lookup', RN:'lookup',
+    // summary / aggregate
+    SM:'summary',
+    // system
+    RI:'system', AD:'system',
+  };
+
+  // Prefix shown before the type label for non-scalar categories
+  // 'ƒ' (U+0192) is the conventional math function symbol
+  const CATEGORY_PREFIX = {
+    formula: 'ƒ ',
+    lookup:  '⇠ ',   // arrow indicating value comes from elsewhere
+    summary: 'Σ ',   // sigma for aggregate
+    system:  '',
+    scalar:  '',
+  };
 
   // ── Styles ───────────────────────────────────────────────────────────────
   GM_addStyle(`
+    /* Base label */
     .${LABEL_CLASS} {
       display: block;
       font-style: italic;
       font-size: 10px;
       font-weight: 400;
-      color: #8b95a3;
       line-height: 1.3;
       margin-top: 1px;
       white-space: nowrap;
       pointer-events: none;
+      /* default = scalar: neutral grey */
+      color: #8b95a3;
     }
+
+    /* Formula — purple, hoverable to show formula text */
     .${LABEL_CLASS}.is-formula {
       color: #5b2f91;
       pointer-events: auto;
-      cursor: help;
       text-decoration: underline dotted;
-      text-underline-offset: 2px;
+    }
+
+    /* Lookup — teal/cyan: value originates from another table */
+    .${LABEL_CLASS}.is-lookup {
+      color: #1a7f6e;
+    }
+
+    /* Summary — amber: aggregate over child records */
+    .${LABEL_CLASS}.is-summary {
+      color: #9a6200;
+    }
+
+    /* System fields — light grey, de-emphasised */
+    .${LABEL_CLASS}.is-system {
+      color: #b0b8c4;
+      font-style: normal;
     }
     #${POPUP_ID} {
       position: fixed;
@@ -189,11 +238,31 @@
         continue;
       }
 
+      // A field is a formula if it has a formula expression OR its type is FM/FV.
+      // Additionally, Quickbase hides the formula text on some views, but marks
+      // the field with a 'virtual' flag (bit 4, e.g. flags = 34956 instead of 34952).
+      // We check this flag to upgrade 'scalar' output types (like TX, NM) to formulas.
+      var hasFormulaStr = !!(field.formula || field.formulatext || field.formulaText);
+      var isVirtualFlag = !!(field.flags && (field.flags & 4));
+      
+      var category = FIELD_CATEGORY[typeCode] || 'scalar';
+      if (hasFormulaStr || FIELD_CATEGORY[typeCode] === 'formula' || (isVirtualFlag && category === 'scalar')) {
+        category = 'formula';
+      }
+      
+      var prefix = CATEGORY_PREFIX[category] || '';
+
       var span = document.createElement('span');
-      span.className = LABEL_CLASS + (FORMULA_TYPES[typeCode] ? ' is-formula' : '');
-      span.textContent = typeLabel;
+      span.className = LABEL_CLASS + ' is-' + category;
+      // For formula fields, show the output type name (e.g. "ƒ Text") not just "ƒ Formula"
+      // so the column's data type is still visible alongside the formula indicator.
+      var displayLabel = (category === 'formula' && FIELD_CATEGORY[typeCode] !== 'formula')
+                           ? typeLabel          // e.g. "Text", "Numeric" — the output type
+                           : typeLabel;         // "Formula" for FM/FV types
+      span.textContent = prefix + displayLabel;
       span.setAttribute('data-ft', typeCode);
       span.setAttribute('data-fn', colName);
+      span.setAttribute('data-cat', category);
 
       // Append inside the data-tip element so it appears under the field name
       cell.appendChild(span);
@@ -204,7 +273,38 @@
     return injected > 0;
   }
 
-  // ── Formula hover (event delegation) ────────────────────────────────────
+  // ── Dynamic Schema API ───────────────────────────────────────────────────
+  var formulaCache = {}; // dbid -> { fid: formula }
+  var fetchPromises = {};
+
+  function fetchFormulasForTable(dbid) {
+    if (formulaCache[dbid]) return Promise.resolve(formulaCache[dbid]);
+    if (fetchPromises[dbid]) return fetchPromises[dbid];
+
+    var p = fetch('/db/' + dbid + '?a=API_GetSchema')
+      .then(function(r) { return r.text(); })
+      .then(function(xmlText) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(xmlText, "text/xml");
+        var fields = doc.querySelectorAll('field');
+        var cache = {};
+        for (var i = 0; i < fields.length; i++) {
+          var fid = fields[i].getAttribute('id');
+          var formEl = fields[i].querySelector('formula');
+          if (fid && formEl && formEl.textContent) {
+            cache[fid] = formEl.textContent.trim();
+          }
+        }
+        formulaCache[dbid] = cache;
+        return cache;
+      })
+      .catch(function() { return {}; });
+
+    fetchPromises[dbid] = p;
+    return p;
+  }
+
+  // ── Formula hover (event delegation) — only for formula-category labels ──
   document.addEventListener('mouseover', function(e) {
     var lbl = e.target.closest('.' + LABEL_CLASS + '.is-formula');
     if (!lbl) return;
@@ -212,19 +312,46 @@
     var code = lbl.getAttribute('data-ft') || '';
     clearTimeout(popTimer);
     var cx = e.clientX, cy = e.clientY;
+    
     popTimer = setTimeout(function() {
       var formula = '';
+      var fid = null;
       var fi = getFinfo();
+      
+      var tMatch = location.pathname.match(/\/table\/([^/?#]+)/);
+      var dbid = tMatch ? tMatch[1] : null;
+
       if (fi && name) {
-        var vals = Object.values(fi);
-        for (var i = 0; i < vals.length; i++) {
-          if (vals[i].name && vals[i].name.trim().toLowerCase() === name.toLowerCase()) {
-            formula = vals[i].formula || vals[i].formulatext || vals[i].formulaText || '';
+        var keys = Object.keys(fi);
+        for (var i = 0; i < keys.length; i++) {
+          var f = fi[keys[i]];
+          if (f.name && f.name.trim().toLowerCase() === name.toLowerCase()) {
+            formula = f.formula || f.formulatext || f.formulaText || '';
+            fid = keys[i];
             break;
           }
         }
       }
-      showPopup(name, code, formula, cx, cy);
+
+      // If we immediately found the formula text in gTableInfo, show it natively.
+      if (formula) {
+        showPopup(name, code, formula, cx, cy);
+      } 
+      // If we found the field ID but lack the formula string, dynamically fetch it.
+      else if (fid && dbid) {
+        showPopup(name, code, "Fetching formula...", cx, cy);
+        
+        fetchFormulasForTable(dbid).then(function(cache) {
+          // Verify we are still hovering it
+          if (popup && popup.style.display === 'block') {
+            showPopup(name, code, cache[fid] || '', cx, cy);
+          }
+        });
+      }
+      else {
+        showPopup(name, code, "", cx, cy);
+      }
+
     }, 120);
   }, true);
 
