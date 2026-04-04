@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Quickbase — Report — Field Type Labels
 // @namespace    https://quickbase.com/userscripts
-// @version      1.8
+// @version      1.10
 // @description  Shows field type in italics under each column header in table reports; hovering a formula field shows a scrollable formula preview
 // @match        https://*.quickbase.com/*
 // @grant        GM_addStyle
@@ -127,6 +127,7 @@
     #${POPUP_ID} .fp-body  { padding:8px 10px; max-height:200px; overflow:auto; white-space:pre; scrollbar-width:thin; scrollbar-color:#cbd5e1 #ffffff; }
     #${POPUP_ID} .fp-empty { font-family:system-ui,sans-serif; font-style:italic; color:#94a3b8; font-size:11px; white-space:normal; }
     #${POPUP_ID} .fp-trunc { font-family:system-ui,sans-serif; font-style:italic; color:#64748b; font-size:10px; white-space:normal; display:block; margin-top:8px; border-top:1px dashed #e2e8f0; padding-top:6px; }
+    #${POPUP_ID} .fp-comment { font-style:italic; color:#94a3b8; }
   `);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -178,6 +179,20 @@
     p.style.top  = Math.max(8, top)  + 'px';
   }
 
+  function formatLine(line) {
+    var inQuote = false;
+    for (var i = 0; i < line.length; i++) {
+      if (line[i] === '"') inQuote = !inQuote;
+      // Find Quickbase comment initiator outside of string literals
+      if (!inQuote && line[i] === '/' && line[i+1] === '/') {
+         var codePart = esc(line.substring(0, i));
+         var commentPart = esc(line.substring(i + 2)); // remove '//'
+         return codePart + '<span class="fp-comment">' + commentPart + '</span>';
+      }
+    }
+    return esc(line);
+  }
+
   function showPopup(name, typeCode, formula, x, y) {
     var p = getPopup();
     var label = TYPE_LABELS[typeCode] || typeCode;
@@ -187,12 +202,23 @@
       if (formula === 'Fetching formula...') {
         bodyHtml = '<span class="fp-empty">Fetching formula...</span>';
       } else {
-        var lines = formula.split(/\r?\n/);
+        // Strip out lines that are entirely whitespace
+        var lines = formula.split(/\r?\n/).filter(function(line) {
+          return line.trim() !== '';
+        });
+
+        // Format up to 5 lines
+        var limit = Math.min(lines.length, 5);
+        var formatted = [];
+        for (var l = 0; l < limit; l++) {
+           formatted.push(formatLine(lines[l]));
+        }
+
         if (lines.length > 5) {
-          bodyHtml = esc(lines.slice(0, 5).join('\n')) + 
+          bodyHtml = formatted.join('\n') + 
                      '\n<span class="fp-trunc">... (Formula exceeds 5 lines. View field settings to read more.)</span>';
         } else {
-          bodyHtml = esc(formula);
+          bodyHtml = formatted.join('\n');
         }
       }
     }
@@ -283,6 +309,10 @@
       // Append inside the data-tip element so it appears under the field name
       cell.appendChild(span);
       cell.setAttribute(DONE_ATTR, '1');
+      
+      // Prevent Quickbase's native redundant tooltip from showing
+      cell.removeAttribute('data-tip');
+      
       injected++;
     }
 

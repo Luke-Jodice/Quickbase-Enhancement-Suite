@@ -14,6 +14,7 @@ Tampermonkey userscripts that fill the gaps in the Quickbase developer experienc
 | [Legacy Form Field Search](#legacy-form-field-search) | `Ctrl + F` | Filter the field list in the legacy form editor |
 | [Hover Table Info](#hover-table-info) | Hover | Schema stats (field counts, types, formulas, relationships) on table links |
 | [Hover Table ID](#hover-table-id) | Hover | Quickly reveals the raw DBID when hovering over table links |
+| [Report Field Labels](#report-field-labels) | Automatic | Injects field type labels into column headers with formula hover previews |
 
 ---
 
@@ -125,6 +126,29 @@ A lightweight tooltip that reveals the raw DBID (Table ID) when hovering over ta
 - WeakMap caching to prevent redundant parsing
 - 400ms hover delay for a natural feel
 - Minimal, unobtrusive tooltip styling
+
+</details>
+
+---
+
+## Table Report
+
+### Report Field Labels
+
+> `Table Report/Quickbase - Report - Field Type Labels.user.js` — v1.9
+
+Injects an elegant, italicized field type label immediately underneath each column header natively within Quickbase table reports. Provides instant visual indication of field categories (Formula, Lookup, Summary, Scalar) using distinct prefixes and colors.
+
+<details>
+<summary>Features</summary>
+
+- Field category coloring (`ƒ` for formula, `⇠` for lookup, `Σ` for summary)
+- Identifies "Virtual" formula fields even when Quickbase strips their payload
+- Hover over formula fields to see a beautifully formatted tooltip displaying the active formula text
+- Dynamically fetches and natively caches formula definitions using internal XML schema APIs (`API_GetSchema`) seamlessly via the browser session—no App Tokens required
+- Automatically strips whitespace and truncates massive formulas at 5 lines for a clean, dense preview
+- Custom inline lexer parses and italicizes Quickbase `//` code comments automatically
+- MutationObserver integration handles dynamic column reordering and Single Page App (SPA) navigation flawlessly
 
 </details>
 
