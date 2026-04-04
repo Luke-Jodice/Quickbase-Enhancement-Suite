@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Quickbase — Hover Table Schema Summary
+// @name         Quickbase — Side Nav — Hover Table Schema Summary
 // @namespace    https://quickbase.com/userscripts
-// @version      3.0
+// @version      3.1
 // @description  Hover over table links to see a schema summary pulled from page data (no API calls)
 // @match        https://*.quickbase.com/*
 // @grant        GM_addStyle
@@ -108,7 +108,10 @@
 
   var tooltip = null;
   var lastTarget = null;
+  var hoverTimer = null;
+  var pendingCoords = null;
   var OFFSET = 14;
+  var HOVER_DELAY = 400;
 
   function esc(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -203,6 +206,9 @@
   }
 
   function hideTooltip() {
+    clearTimeout(hoverTimer);
+    hoverTimer = null;
+    pendingCoords = null;
     lastTarget = null;
     if (tooltip) tooltip.style.display = 'none';
   }
@@ -213,22 +219,33 @@
     var target = e.target.closest(TABLE_LINK_SEL);
     if (!target || target === lastTarget) return;
 
+    // Clear any pending timer from a previous link
+    clearTimeout(hoverTimer);
     lastTarget = target;
+    pendingCoords = { x: e.clientX, y: e.clientY };
 
     var match = target.href.match(/\/table\/([^/?#]+)/);
     if (!match) return;
     var dbid = match[1];
 
-    var summary = buildSummary(dbid);
-    if (!summary) {
-      hideTooltip();
-      return;
-    }
+    hoverTimer = setTimeout(function () {
+      // Verify we're still hovering the same target
+      if (lastTarget !== target) return;
 
-    showTooltip(renderTooltip(summary), e.clientX, e.clientY);
+      var summary = buildSummary(dbid);
+      if (!summary) return;
+
+      var c = pendingCoords || { x: e.clientX, y: e.clientY };
+      showTooltip(renderTooltip(summary), c.x, c.y);
+    }, HOVER_DELAY);
   }, true);
 
   document.addEventListener('mousemove', function (e) {
+    // Track coords while waiting for the delay
+    if (hoverTimer && lastTarget) {
+      pendingCoords = { x: e.clientX, y: e.clientY };
+    }
+    // Follow cursor when tooltip is visible
     if (tooltip && tooltip.style.display === 'block') {
       var left = e.clientX + OFFSET;
       var top = e.clientY + OFFSET;
