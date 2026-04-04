@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Quickbase — Report — Field Type Labels
 // @namespace    https://quickbase.com/userscripts
-// @version      1.9
+// @version      1.10
 // @description  Shows field type in italics under each column header in table reports; hovering a formula field shows a scrollable formula preview
 // @match        https://*.quickbase.com/*
 // @grant        GM_addStyle
@@ -309,6 +309,10 @@
       // Append inside the data-tip element so it appears under the field name
       cell.appendChild(span);
       cell.setAttribute(DONE_ATTR, '1');
+      
+      // Prevent Quickbase's native redundant tooltip from showing
+      cell.removeAttribute('data-tip');
+      
       injected++;
     }
 
