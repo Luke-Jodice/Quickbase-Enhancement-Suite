@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Quickbase — Report — Field Type Labels
 // @namespace    https://quickbase.com/userscripts
-// @version      1.6
+// @version      1.7
 // @description  Shows field type in italics under each column header in table reports; hovering a formula field shows a scrollable formula preview
 // @match        https://*.quickbase.com/*
 // @grant        GM_addStyle
@@ -102,10 +102,10 @@
     #${POPUP_ID} {
       position: fixed;
       z-index: 999999;
-      background: #1e1e2e;
-      color: #cdd6f4;
+      background: #ffffff;
+      color: #334155;
       border-radius: 8px;
-      box-shadow: 0 6px 24px rgba(0,0,0,.3);
+      box-shadow: 0 6px 24px rgba(0,0,0,.15);
       font-family: "SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
       font-size: 12px;
       line-height: 1.6;
@@ -114,18 +114,18 @@
       display: none;
       max-width: 420px;
       min-width: 180px;
-      border: 1px solid #313244;
+      border: 1px solid #e2e8f0;
       overflow: hidden;
     }
     #${POPUP_ID} .fp-head {
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      padding: 5px 10px; background: #181825; border-bottom: 1px solid #313244;
-      font-family: system-ui, sans-serif; font-size: 10px; color: #a6adc8;
+      padding: 5px 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+      font-family: system-ui, sans-serif; font-size: 10px; color: #64748b;
     }
-    #${POPUP_ID} .fp-title { font-weight:600; color:#cba6f7; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    #${POPUP_ID} .fp-badge { flex-shrink:0; font-size:9px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; background:#313244; color:#a6adc8; border-radius:3px; padding:1px 5px; }
-    #${POPUP_ID} .fp-body  { padding:8px 10px; max-height:200px; overflow:auto; white-space:pre; scrollbar-width:thin; scrollbar-color:#45475a #1e1e2e; }
-    #${POPUP_ID} .fp-empty { font-family:system-ui,sans-serif; font-style:italic; color:#585b70; font-size:11px; white-space:normal; }
+    #${POPUP_ID} .fp-title { font-weight:600; color:#5b2f91; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    #${POPUP_ID} .fp-badge { flex-shrink:0; font-size:9px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; background:#e2e8f0; color:#475569; border-radius:3px; padding:1px 5px; }
+    #${POPUP_ID} .fp-body  { padding:8px 10px; max-height:200px; overflow:auto; white-space:pre; scrollbar-width:thin; scrollbar-color:#cbd5e1 #ffffff; }
+    #${POPUP_ID} .fp-empty { font-family:system-ui,sans-serif; font-style:italic; color:#94a3b8; font-size:11px; white-space:normal; }
   `);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
