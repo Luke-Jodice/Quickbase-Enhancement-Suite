@@ -30,20 +30,17 @@
       #qb-url-popup {
         position: fixed;
         z-index: 999999;
-        background: #1a1d21;
-        color: #fff;
-        border-radius: 4px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        background: #ffffff;
+        color: #272b32;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        font-size: 11px;
-        font-weight: 500;
-        padding: 6px 10px;
+        padding: 12px;
         pointer-events: none;
         display: none;
-        white-space: normal;
-        max-width: 400px;
-        word-break: break-all;
-        line-height: 1.4;
+        max-width: 340px;
+        line-height: 1.5;
+        border: 1px solid #e1e3e6;
       }
     `);
   }
