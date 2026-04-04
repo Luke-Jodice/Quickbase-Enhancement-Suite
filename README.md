@@ -1,6 +1,6 @@
 # Quickbase Enhancement Suite
 
-Tampermonkey userscripts that fill the gaps in the Quickbase developer experience. Autocomplete, search, hover tooltips — small tools that save real time.
+Tampermonkey userscripts that fill the gaps in the Quickbase developer experience. Autocomplete, search, hover tooltips, schema summaries — small tools that save real time.
 
 ---
 
@@ -12,8 +12,8 @@ Tampermonkey userscripts that fill the gaps in the Quickbase developer experienc
 | [Function Autocomplete](#function-autocomplete) | `Ctrl + Space` | Autocomplete formula functions with parameter signatures |
 | [Field Marker Tooltips](#field-marker-tooltips) | Hover | Show field type, FID, and table on hover over field markers |
 | [Legacy Form Field Search](#legacy-form-field-search) | `Ctrl + F` | Filter the field list in the legacy form editor |
-| [Hover Table Info](#hover-table-info) | Hover | Displays rich schema stats (field counts, formulas, relationships) on table links |
-| [Hover Table ID](#hover-table-id) | Hover | Quickly displays the raw DBID (Table ID) when hovering over table links |
+| [Hover Table Info](#hover-table-info) | Hover | Schema stats (field counts, types, formulas, relationships) on table links |
+| [Hover Table ID](#hover-table-id) | Hover | Quickly reveals the raw DBID when hovering over table links |
 
 ---
 
@@ -93,40 +93,38 @@ Adds a sticky search bar to the top of the legacy form editor's field list. Filt
 
 ---
 
-## Horizontal Nav
+## Side Nav
 
 ### Hover Table Info
 
-> `Horizontal Nav/Quickbase - Nav - hover table info.user.js` — v2.1
+> `Side Nav/Quickbase - Nav - hover table info.user.js` — v3.3
 
-Hover over any table link in the horizontal navigation or modern UI to see a detailed tooltip summarizing the table's schema. It actively uses your session via `API_GetSchema` to pull real-time data securely.
-
-NOTE: This script would require the user to disable "Require Application Tokens" from the App Properties Page.
+Hover over any table link in the sidebar to see a schema summary tooltip. Reads directly from `gTableInfo` — no API calls, no app tokens, instant display.
 
 <details>
 <summary>Features</summary>
 
-- Displays Table Name and Description
-- Shows total Fields, Key FID, Formula counts, and Relationship counts
-- Operates directly via active session tickets without needing explicit tokens
-- Clean UI seamlessly matches standard Quickbase aesthetic
-- Gracefully caches API replies instantly
+- Shows table name, DBID, alias, key field, and field count
+- Field type breakdown as tags (e.g. "42 Text", "12 Phone", "5 URL")
+- Full stats (formulas, relationships) shown when hovering the current table
+- Compact view for other tables (field data is partially loaded by Quickbase)
+- 400ms hover delay to avoid accidental triggers when mousing past links
 
 </details>
 
 ### Hover Table ID
 
-> `Horizontal Nav/Quickbase — Nav - HovertableID.user.js` — v1.6
+> `Side Nav/Quickbase — Nav - HovertableID.user.js` — v1.8
 
-A super lightweight alternative that simply reveals the raw DBID (Table ID) of a table when hovering over navigation links. 
+A lightweight tooltip that reveals the raw DBID (Table ID) when hovering over table links in the sidebar. Built for developers who just need to grab a table ID quickly.
 
 <details>
 <summary>Features</summary>
 
-- Instantly displays the destination table ID by parsing the URL
-- Implements hyper-fast `WeakMap` caching to prevent memory leaks and redundant parsing
-- Simple, unobtrusive tooltip styling
-- Perfect for developers who just need to grab DBIDs to copy/paste quickly
+- Displays the table DBID parsed from the link URL
+- WeakMap caching to prevent redundant parsing
+- 400ms hover delay for a natural feel
+- Minimal, unobtrusive tooltip styling
 
 </details>
 
