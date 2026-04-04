@@ -191,7 +191,7 @@
     var refCount = 0;
     for (var j = 0; j < fids.length; j++) {
       var f = finfo[fids[j]];
-      if (f.type === 'FM' || f.type === 'FV') formulaCount++;
+      if (f.type === 'FM' || f.type === 'FV' || f.formula) formulaCount++;
       if (f.type === 'SL' || f.type === 'XD' || f.reffid > 0) refCount++;
     }
 

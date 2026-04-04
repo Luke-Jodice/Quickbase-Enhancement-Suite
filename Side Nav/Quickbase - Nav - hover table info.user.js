@@ -143,8 +143,12 @@
     var refCount = 0;
     for (var j = 0; j < fids.length; j++) {
       var f = finfo[fids[j]];
-      if (f.type === 'FM' || f.type === 'FV') formulaCount++;
-      if (f.type === 'SL' || f.type === 'XD' || f.reffid > 0) refCount++;
+      // Formula detection
+      if (f.type === 'FM' || f.type === 'FV' || f.formula) formulaCount++;
+      // Relationship detection — parent side (dblink), cross-db,
+      // child side (Lookup, Summary, reference fields with masterfid)
+      if (f.type === 'SL' || f.type === 'XD' || f.type === 'LU' || f.type === 'SM'
+          || f.reffid > 0 || f.masterfid || f.masterTableId) refCount++;
     }
 
     return {
