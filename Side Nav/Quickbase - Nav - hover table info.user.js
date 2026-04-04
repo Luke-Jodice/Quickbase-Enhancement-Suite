@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Quickbase — Side Nav — Hover Table Schema Summary
 // @namespace    https://quickbase.com/userscripts
-// @version      3.1
+// @version      3.3
 // @description  Hover over table links to see a schema summary pulled from page data (no API calls)
 // @match        https://*.quickbase.com/*
 // @grant        GM_addStyle
@@ -147,6 +147,13 @@
       if (f.type === 'SL' || f.type === 'XD' || f.reffid > 0) refCount++;
     }
 
+    // gTableInfo only fully populates finfo for the current table.
+    // For other tables we get a small subset — formula/relationship
+    // counts will be inaccurate, so only show them for the current table.
+    var urlMatch = location.pathname.match(/\/table\/([^/?#]+)/);
+    var currentTableId = urlMatch ? urlMatch[1] : null;
+    var isCurrentTable = dbid === currentTableId;
+
     return {
       name: t.name || 'Unnamed',
       dbid: dbid,
@@ -156,8 +163,9 @@
       refCount: refCount,
       keyFid: t.kfid || 3,
       keyName: t.kfname || 'Record ID#',
-      forms: (t.forminfo || []).length,
+      forms: Array.isArray(t.forminfo) ? t.forminfo.length : 0,
       typeCounts: typeCounts,
+      isCurrentTable: isCurrentTable,
     };
   }
 
@@ -172,17 +180,24 @@
       })
       .join('');
 
+    // Build the stats grid.
+    // Current table: full stats (Fields, Key Field, Formulas, Relationships).
+    // Other tables: limited stats (Fields, Key Field) — data is incomplete.
+    var stats = ''
+      + '<div class="qb-sp-stat"><span class="qb-sp-label">Fields</span><span class="qb-sp-value">' + s.fieldCount + '</span></div>'
+      + '<div class="qb-sp-stat"><span class="qb-sp-label">Key Field</span><span class="qb-sp-value">#' + s.keyFid + '</span></div>';
+
+    if (s.isCurrentTable) {
+      stats += '<div class="qb-sp-stat"><span class="qb-sp-label">Formulas</span><span class="qb-sp-value">' + s.formulaCount + '</span></div>'
+        + '<div class="qb-sp-stat"><span class="qb-sp-label">Relationships</span><span class="qb-sp-value">' + s.refCount + '</span></div>';
+    }
+
     return ''
       + '<div class="qb-sp-header">'
       + '  <span class="qb-sp-name">' + esc(s.name) + '</span>'
       + '  <span class="qb-sp-dbid">' + esc(s.dbid) + '</span>'
       + '</div>'
-      + '<div class="qb-sp-stats">'
-      + '  <div class="qb-sp-stat"><span class="qb-sp-label">Fields</span><span class="qb-sp-value">' + s.fieldCount + '</span></div>'
-      + '  <div class="qb-sp-stat"><span class="qb-sp-label">Key Field</span><span class="qb-sp-value">#' + s.keyFid + '</span></div>'
-      + '  <div class="qb-sp-stat"><span class="qb-sp-label">Formulas</span><span class="qb-sp-value">' + s.formulaCount + '</span></div>'
-      + '  <div class="qb-sp-stat"><span class="qb-sp-label">Relationships</span><span class="qb-sp-value">' + s.refCount + '</span></div>'
-      + '</div>'
+      + '<div class="qb-sp-stats">' + stats + '</div>'
       + (tags ? '<div class="qb-sp-types">' + tags + '</div>' : '')
       + (s.alias ? '<div class="qb-sp-alias">' + esc(s.alias) + '</div>' : '');
   }
