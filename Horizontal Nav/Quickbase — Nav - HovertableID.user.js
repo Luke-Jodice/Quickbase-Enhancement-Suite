@@ -1,0 +1,126 @@
+// ==UserScript==
+// @name         Quickbase — Hover URL (Cached)
+// @namespace    https://quickbase.com/userscripts
+// @version      1.6
+// @description  Displays the destination URL when hovering over elements with class .css-ta74hp, with instant caching.
+// @match        https://*.quickbase.com/*
+// @grant        GM_addStyle
+// @run-at       document-idle
+// ==/UserScript==
+
+(function () {
+  'use strict';
+
+  // ── Configuration & State ────────────────────────────────────────────────
+  const CONFIG = {
+    debug: true,
+    offset: 12
+  };
+
+  let state = {
+    tooltip: null,
+    lastTarget: null,
+    // WeakMap is perfect for caching element-specific data without memory leaks
+    cache: new WeakMap() 
+  };
+
+  // ── Styles ──────────────────────────────────────────────────────────────
+  function injectStyles() {
+    GM_addStyle(`
+      #qb-url-popup {
+        position: fixed;
+        z-index: 999999;
+        background: #1a1d21;
+        color: #fff;
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 6px 10px;
+        pointer-events: none;
+        display: none;
+        white-space: normal;
+        max-width: 400px;
+        word-break: break-all;
+        line-height: 1.4;
+      }
+    `);
+  }
+
+  const log = (msg, ...args) => {
+    if (CONFIG.debug) {
+      console.log(`%c[QB URL Hover] ${msg}`, 'color: #4a90d9; font-weight: bold;', ...args);
+    }
+  };
+
+  // ── Tooltip Management ──────────────────────────────────────────────────
+  function createTooltip() {
+    if (document.getElementById('qb-url-popup')) return;
+    state.tooltip = document.createElement('div');
+    state.tooltip.id = 'qb-url-popup';
+    document.body.appendChild(state.tooltip);
+  }
+
+  function updateTooltip(content, x, y) {
+    if (!state.tooltip) return;
+    if (content) state.tooltip.textContent = content;
+    
+    state.tooltip.style.left = `${x + CONFIG.offset}px`;
+    state.tooltip.style.top = `${y + CONFIG.offset}px`;
+    state.tooltip.style.display = 'block';
+  }
+
+  // ── Initialization ──────────────────────────────────────────────────────
+  function init() {
+    injectStyles();
+    createTooltip();
+    log('Initialized with Caching.');
+
+    // 1. Position tracking (high frequency, but very cheap)
+    document.addEventListener('mousemove', (e) => {
+      if (state.tooltip && state.tooltip.style.display === 'block') {
+        updateTooltip(null, e.clientX, e.clientY);
+      }
+    }, { passive: true });
+
+    // 2. Hover Logic (only fires once per element entry)
+    document.addEventListener('mouseover', (e) => {
+      const target = e.target.closest('.css-ta74hp');
+      if (!target || target === state.lastTarget) return;
+      
+      state.lastTarget = target;
+      
+      // Check Cache first
+      let url = state.cache.get(target);
+      
+      if (!url) {
+        // Not in cache, resolve it
+        const linkElement = target.closest('a') || target.querySelector('a');
+        url = linkElement ? linkElement.href : 'No URL found';
+        let match = url;
+        match = url.match(/\/table\/([^/]+)/);
+        var tableid = match[1];
+        
+        // Store in cache for next time
+        state.cache.set(target, url);
+        log(`Resolved & Cached: "${target.textContent.trim().substring(0, 20)}..."`);
+      } else {
+        log(`Cache Hit: "${target.textContent.trim().substring(0, 20)}..."`);
+      }
+
+      updateTooltip(tableid, e.clientX, e.clientY);
+    }, true);
+
+    document.addEventListener('mouseout', (e) => {
+      const target = e.target.closest('.css-ta74hp');
+      if (target) {
+        state.lastTarget = null;
+        if (state.tooltip) state.tooltip.style.display = 'none';
+      }
+    }, true);
+  }
+
+  // Bootstrap
+  init();
+})();
