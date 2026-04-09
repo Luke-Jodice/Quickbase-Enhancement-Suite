@@ -109,7 +109,6 @@
   var tooltip = null;
   var lastTarget = null;
   var hoverTimer = null;
-  var pendingCoords = null;
   var OFFSET = 14;
   var HOVER_DELAY = 400;
 
@@ -223,7 +222,6 @@
   function hideTooltip() {
     clearTimeout(hoverTimer);
     hoverTimer = null;
-    pendingCoords = null;
     lastTarget = null;
     if (tooltip) tooltip.style.display = 'none';
   }
@@ -237,7 +235,6 @@
     // Clear any pending timer from a previous link
     clearTimeout(hoverTimer);
     lastTarget = target;
-    pendingCoords = { x: e.clientX, y: e.clientY };
 
     var match = target.href.match(/\/table\/([^/?#]+)/);
     if (!match) return;
@@ -250,26 +247,10 @@
       var summary = buildSummary(dbid);
       if (!summary) return;
 
-      var c = pendingCoords || { x: e.clientX, y: e.clientY };
-      showTooltip(renderTooltip(summary), c.x, c.y);
+      var rect = target.getBoundingClientRect();
+      showTooltip(renderTooltip(summary), rect.right, rect.top);
     }, HOVER_DELAY);
   }, true);
-
-  document.addEventListener('mousemove', function (e) {
-    // Track coords while waiting for the delay
-    if (hoverTimer && lastTarget) {
-      pendingCoords = { x: e.clientX, y: e.clientY };
-    }
-    // Follow cursor when tooltip is visible
-    if (tooltip && tooltip.style.display === 'block') {
-      var left = e.clientX + OFFSET;
-      var top = e.clientY + OFFSET;
-      if (left + 330 > window.innerWidth) left = e.clientX - 330;
-      if (top + tooltip.offsetHeight + 10 > window.innerHeight) top = e.clientY - tooltip.offsetHeight - OFFSET;
-      tooltip.style.left = left + 'px';
-      tooltip.style.top = top + 'px';
-    }
-  }, { passive: true });
 
   document.addEventListener('mouseout', function (e) {
     if (e.target.closest(TABLE_LINK_SEL)) hideTooltip();
